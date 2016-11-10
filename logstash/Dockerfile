@@ -8,12 +8,6 @@ MAINTAINER Tony.SHao
 #                                INSTALLATION
 ###############################################################################
 
-RUN apt-get update && apt-get install -y \
-		apt-transport-https \
-		ca-certificates \
-		wget \
-	--no-install-recommends && rm -rf /var/lib/apt/lists/*
-
 # grab gosu for easy step-down from root
 ENV GOSU_VERSION 1.9
 RUN set -x \
