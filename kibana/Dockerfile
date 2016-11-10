@@ -30,7 +30,7 @@ RUN set -x \
     && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
     && chmod +x /usr/local/bin/gosu \
     && gosu nobody true \
-    && apt-get purge -y --auto-remove ca-certificates
+    && apt-get purge -y --auto-remove ca-certificates wget
 
 # grab tini for signal processing and zombie killing
 ENV TINI_VERSION v0.13.0
@@ -46,7 +46,7 @@ RUN set -x \
 
 # https://www.elastic.co/guide/en/kibana/5.0/deb.html
 # https://artifacts.elastic.co/GPG-KEY-elasticsearch
-RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 46095ACC8548582C1A2699A9D27D666CD88E42B4
 
 ENV KIBANA_MAJOR 5.0
 ENV KIBANA_VERSION 5.0.0
@@ -56,7 +56,6 @@ RUN echo 'deb https://artifacts.elastic.co/packages/5.x/apt stable main' > /etc/
 RUN set -x \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends kibana=$KIBANA_VERSION \
-    && apt-get purge -y --auto-remove wget\
 	&& rm -rf /var/lib/apt/lists/* \
 	\
 # the default "server.host" is "localhost" in 5+
