@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 		apt-transport-https \
 		ca-certificates \
 		wget \
-	--no-install-recommends && rm -rf /var/lib/apt/lists/
+	--no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # grab gosu for easy step-down from root
 ENV GOSU_VERSION 1.9
@@ -38,10 +38,9 @@ RUN echo 'deb https://artifacts.elastic.co/packages/5.x/apt stable main' > /etc/
 
 ENV LOGSTASH_VERSION 1:5.0.0-1
 
-RUN set -x \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends logstash=$LOGSTASH_VERSION \
-	&& rm -rf /var/lib/apt/lists/*
+RUN apt-get update 
+RUN apt-get install -y logstash
+RUN rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/share/logstash/bin:$PATH
 
