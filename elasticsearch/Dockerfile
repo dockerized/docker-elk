@@ -32,11 +32,9 @@ RUN set -x \
 	&& apt-get update && apt-get install -y --no-install-recommends apt-transport-https && rm -rf /var/lib/apt/lists/* \
 	&& echo "deb https://artifacts.elastic.co/packages/5.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-5.x.list
 
-ENV ELASTICSEARCH_VERSION 5.0.0
-
 RUN set -x \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends elasticsearch=$ELASTICSEARCH_VERSION \
+	&& apt-get install -y --no-install-recommends elasticsearch \
     && apt-get purge -y --auto-remove wget \
 	&& rm -rf /var/lib/apt/lists/*
 

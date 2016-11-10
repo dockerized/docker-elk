@@ -21,20 +21,24 @@ RUN set -x \
     && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
     && chmod +x /usr/local/bin/gosu \
     && gosu nobody true \
-    && apt-get purge -y --auto-remove ca-certificates
+    && apt-get purge -y --auto-remove ca-certificates wget
 
 # https://www.elastic.co/guide/en/logstash/5.0/installing-logstash.html#_apt
 # https://artifacts.elastic.co/GPG-KEY-elasticsearch
-RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 46095ACC8548582C1A2699A9D27D666CD88E42B4
 
-RUN echo "deb https://artifacts.elastic.co/packages/5.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-5.x.list
+RUN set -x \
+	&& apt-get update \
+	&& apt-get install -y apt-transport-https \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN echo 'deb https://artifacts.elastic.co/packages/5.x/apt stable main' > /etc/apt/sources.list.d/logstash.list
 
 ENV LOGSTASH_VERSION 1:5.0.0-1
 
 RUN set -x \
 	&& apt-get update \
-	&& apt-get install -y --no-install-recommends logstash=$LOGSTASH_VERSION \
-    && apt-get purge -y --auto-remove wget \
+	&& apt-get install -y --no-install-recommends logstash=LOGSTASH_VERSION \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/share/logstash/bin:$PATH
