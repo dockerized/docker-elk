@@ -21,7 +21,7 @@ RUN set -x \
     && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
     && chmod +x /usr/local/bin/gosu \
     && gosu nobody true \
-    && apt-get purge -y --auto-remove ca-certificates wgete
+    && apt-get purge -y --auto-remove ca-certificates
 
 # https://artifacts.elastic.co/GPG-KEY-elasticsearch
 RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
@@ -37,6 +37,7 @@ ENV ELASTICSEARCH_VERSION 5.0.0
 RUN set -x \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends elasticsearch=$ELASTICSEARCH_VERSION \
+    && apt-get purge -y --auto-remove wget \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/share/elasticsearch/bin:$PATH
