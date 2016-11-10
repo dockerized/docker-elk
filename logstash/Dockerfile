@@ -8,64 +8,48 @@ MAINTAINER Tony.SHao
 #                                INSTALLATION
 ###############################################################################
 
-### install prerequisites (cURL, gosu)
-
-ENV GOSU_VERSION 1.10
-
-ARG DEBIAN_FRONTEND=noninteractive
+# grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.7
 RUN set -x \
- && apt-get update -qq \
- && apt-get install -qqy --no-install-recommends ca-certificates curl \
- && rm -rf /var/lib/apt/lists/* \
- && curl -L -o /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
- && curl -L -o /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
- && export GNUPGHOME="$(mktemp -d)" \
- && gpg --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
- && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
- && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
- && chmod +x /usr/local/bin/gosu \
- && gosu nobody true \
- && apt-get clean \
- && set +x
+	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
+	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
+	&& export GNUPGHOME="$(mktemp -d)" \
+	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
+	&& rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
+	&& chmod +x /usr/local/bin/gosu \
+	&& gosu nobody true
 
+# https://www.elastic.co/guide/en/logstash/5.0/installing-logstash.html#_apt
+# https://artifacts.elastic.co/GPG-KEY-elasticsearch
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 46095ACC8548582C1A2699A9D27D666CD88E42B4
 
-### install Logstash
+RUN echo 'deb https://artifacts.elastic.co/packages/5.x/apt stable main' > /etc/apt/sources.list.d/logstash.list
 
-ENV LOGSTASH_VERSION 5.0.0
-ENV LOGSTASH_HOME /opt/logstash
-ENV LOGSTASH_PACKAGE logstash-${LOGSTASH_VERSION}.tar.gz
-ENV LOGSTASH_GID 992
-ENV LOGSTASH_UID 992
+ENV LOGSTASH_VERSION 1:5.0.0-1
 
-RUN mkdir ${LOGSTASH_HOME} \
- && curl -O https://artifacts.elastic.co/downloads/logstash/${LOGSTASH_PACKAGE} \
- && tar xzf ${LOGSTASH_PACKAGE} -C ${LOGSTASH_HOME} --strip-components=1 \
- && rm -f ${LOGSTASH_PACKAGE} \
- && groupadd -r logstash -g ${LOGSTASH_GID} \
- && useradd -r -s /usr/sbin/nologin -d ${LOGSTASH_HOME} -c "Logstash service user" -u ${LOGSTASH_UID} -g logstash logstash \
- && mkdir -p /var/log/logstash /etc/logstash/conf.d \
- && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash
+RUN set -x \
+	&& apt-get update \
+	&& apt-get install -y --no-install-recommends logstash=$LOGSTASH_VERSION \
+	&& rm -rf /var/lib/apt/lists/*
 
-###############################################################################
-#                               CONFIGURATION
-###############################################################################
+ENV PATH /usr/share/logstash/bin:$PATH
 
-### configure Logstash
+# necessary for 5.0+ (overriden via "--path.settings", ignored by < 5.0)
+ENV LS_SETTINGS_DIR /etc/logstash
+# comment out some troublesome configuration parameters
+#   path.config: No config files found: /etc/logstash/conf.d/*
+RUN set -ex; \
+	if [ -f "$LS_SETTINGS_DIR/logstash.yml" ]; then \
+		sed -ri 's!^path\.config:!#&!g' "$LS_SETTINGS_DIR/logstash.yml"; \
+	fi; \
+# if the "log4j2.properties" file exists (logstash 5.x), let's empty it out so we get the default: "logging only errors to the console"
+	if [ -f "$LS_SETTINGS_DIR/log4j2.properties" ]; then \
+		cp "$LS_SETTINGS_DIR/log4j2.properties" "$LS_SETTINGS_DIR/log4j2.properties.dist"; \
+		truncate --size=0 "$LS_SETTINGS_DIR/log4j2.properties"; \
+	fi
 
-### configure logrotate
+COPY docker-entrypoint.sh /
 
-ADD ./logstash-logrotate /etc/logrotate.d/logstash
-RUN chmod 644 /etc/logrotate.d/logstash
-
-###############################################################################
-#                                   START
-###############################################################################
-
-ADD ./start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
-
-# 5044 (Logstash Beats interface, receives logs from Beats such as Filebeat 
-EXPOSE 5044
-
-CMD [ "/usr/share/logstash/bin/logstash", "--path.config", "/etc/logstash/", "--log.level", "debug"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["-e", ""]]
